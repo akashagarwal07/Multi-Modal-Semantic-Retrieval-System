@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Search</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: #fff; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; color: #00d2ff; }
+        
+        .search-box {
+            background: #2d2d2d; padding: 20px; border-radius: 10px;
+            display: flex; gap: 10px; flex-wrap: wrap;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        input[type="text"] {
+            flex: 1; padding: 12px; border: none; border-radius: 5px;
+            background: #404040; color: white; font-size: 16px;
+        }
+        input[type="file"] { color: #bbb; }
+        button {
+            padding: 12px 25px; background: #00d2ff; border: none;
+            border-radius: 5px; color: #000; font-weight: bold;
+            cursor: pointer; font-size: 16px;
+        }
+        button:hover { background: #00aacc; }
+
+        .results { margin-top: 30px; }
+        .card {
+            background: #252525; margin-bottom: 15px; padding: 20px;
+            border-radius: 8px; border-left: 5px solid #00d2ff;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .card h3 { margin: 0 0 5px 0; font-size: 18px; }
+        .score { color: #aaa; font-size: 14px; }
+        
+        .actions { display: flex; gap: 10px; }
+        .btn-dl { text-decoration: none; background: #444; padding: 8px 15px; border-radius: 4px; color: white; font-size: 14px; }
+        .btn-view { background: #00d2ff; color: black; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px;}
+        
+        #preview-frame {
+            width: 100%; height: 600px; border: none; margin-top: 20px;
+            background: #fff; display: none; border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔍 Neural Research Search</h1>
+    
+    <div class="search-box">
+        <input type="text" id="query" placeholder="Describe the paper (e.g., 'YOLOv8 architecture diagram')...">
+        <input type="file" id="imgInput" accept="image/*">
+        <button onclick="search()">Search</button>
+    </div>
+
+    <div id="results" class="results"></div>
+    
+    <!-- PDF Preview Area -->
+    <iframe id="preview-frame"></iframe>
+</div>
+
+<script>
+    async function search() {
+        const query = document.getElementById('query').value;
+        const fileInput = document.getElementById('imgInput');
+        const resultDiv = document.getElementById('results');
+        const previewFrame = document.getElementById('preview-frame');
+
+        if (!query && fileInput.files.length === 0) {
+            alert("Please enter text or upload an image.");
+            return;
+        }
+
+        resultDiv.innerHTML = "<p style='text-align:center'>Searching neural embeddings...</p>";
+        previewFrame.style.display = "none";
+
+        const formData = new FormData();
+        if (query) formData.append("query", query);
+        if (fileInput.files.length > 0) formData.append("file", fileInput.files[0]);
+
+        try {
+            const response = await fetch('http://localhost:8000/search', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            resultDiv.innerHTML = "";
+            if (data.results.length === 0) {
+                resultDiv.innerHTML = "<p>No relevant papers found.</p>";
+                return;
+            }
+
+            data.results.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div>
+                        <h3>${item.filename}</h3>
+                        <div class="score">Match Score: ${(item.score * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-view" onclick="viewPdf('${item.url}')">👁 Preview</button>
+                        <a href="${item.url}" class="btn-dl" download>⬇ Download</a>
+                    </div>
+                `;
+                resultDiv.appendChild(card);
+            });
+        } catch (error) {
+            console.error(error);
+            resultDiv.innerHTML = "<p style='color:red'>Error connecting to backend.</p>";
+        }
+    }
+
+    function viewPdf(url) {
+        const frame = document.getElementById('preview-frame');
+        frame.src = url;
+        frame.style.display = "block";
+        // Scroll to preview
+        frame.scrollIntoView({ behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>

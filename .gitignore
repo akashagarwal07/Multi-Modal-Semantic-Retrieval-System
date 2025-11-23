@@ -1,0 +1,5 @@
+pdf_repo/
+__pycache__/
+images/
+texts/
+*.zip
