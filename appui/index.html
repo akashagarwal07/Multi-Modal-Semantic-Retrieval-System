@@ -1,128 +1,258 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Research Search</title>
+    <title>Neural Research Search</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyan: { 400: '#22d3ee', 500: '#06b6d4', 600: '#0891b2' },
+                        gray: { 750: '#2d3748', 850: '#1a202c', 900: '#111827' }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: #fff; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        h1 { text-align: center; color: #00d2ff; }
-        
-        .search-box {
-            background: #2d2d2d; padding: 20px; border-radius: 10px;
-            display: flex; gap: 10px; flex-wrap: wrap;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a202c; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+        .loader {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #22d3ee;
+            border-radius: 50%;
+            width: 30px; height: 30px;
+            animation: spin 1s linear infinite;
         }
-        input[type="text"] {
-            flex: 1; padding: 12px; border: none; border-radius: 5px;
-            background: #404040; color: white; font-size: 16px;
-        }
-        input[type="file"] { color: #bbb; }
-        button {
-            padding: 12px 25px; background: #00d2ff; border: none;
-            border-radius: 5px; color: #000; font-weight: bold;
-            cursor: pointer; font-size: 16px;
-        }
-        button:hover { background: #00aacc; }
-
-        .results { margin-top: 30px; }
-        .card {
-            background: #252525; margin-bottom: 15px; padding: 20px;
-            border-radius: 8px; border-left: 5px solid #00d2ff;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .card h3 { margin: 0 0 5px 0; font-size: 18px; }
-        .score { color: #aaa; font-size: 14px; }
-        
-        .actions { display: flex; gap: 10px; }
-        .btn-dl { text-decoration: none; background: #444; padding: 8px 15px; border-radius: 4px; color: white; font-size: 14px; }
-        .btn-view { background: #00d2ff; color: black; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px;}
-        
-        #preview-frame {
-            width: 100%; height: 600px; border: none; margin-top: 20px;
-            background: #fff; display: none; border-radius: 8px;
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col font-sans">
 
-<div class="container">
-    <h1>🔍 Neural Research Search</h1>
-    
-    <div class="search-box">
-        <input type="text" id="query" placeholder="Describe the paper (e.g., 'YOLOv8 architecture diagram')...">
-        <input type="file" id="imgInput" accept="image/*">
-        <button onclick="search()">Search</button>
-    </div>
+    <!-- Navbar -->
+    <nav class="bg-gray-850 border-b border-gray-700 p-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🧠</span>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                    Neural Research Engine
+                </h1>
+            </div>
+        </div>
+    </nav>
 
-    <div id="results" class="results"></div>
-    
-    <!-- PDF Preview Area -->
-    <iframe id="preview-frame"></iframe>
-</div>
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto p-6 max-w-7xl">
+        
+        <!-- Search Area -->
+        <div class="bg-gray-800 rounded-xl p-6 shadow-2xl border border-gray-700 mb-8">
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <input type="text" id="query" 
+                    class="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition" 
+                    placeholder="Describe the research topic (e.g. 'Transformers in Medical Imaging')...">
+                
+                <label class="flex items-center justify-center px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition border border-gray-600">
+                    <span class="mr-2">📷</span>
+                    <span class="text-sm text-gray-300">Upload Image</span>
+                    <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="document.getElementById('file-name').innerText = this.files[0]?.name || ''">
+                </label>
+            </div>
+            <div id="file-name" class="text-xs text-cyan-400 mb-4 ml-1"></div>
 
-<script>
-    async function search() {
-        const query = document.getElementById('query').value;
-        const fileInput = document.getElementById('imgInput');
-        const resultDiv = document.getElementById('results');
-        const previewFrame = document.getElementById('preview-frame');
+            <!-- Toggles & Action -->
+            <div class="flex flex-wrap items-center justify-between gap-4 border-t border-gray-700 pt-4">
+                <div class="flex gap-6">
+                    <!-- Toggle: Trusted Mode -->
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="trustedMode" class="sr-only peer">
+                        <div class="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                        <span class="ms-3 text-sm font-medium text-gray-300">
+                            Trusted Mode
+                        </span>
+                    </label>
 
-        if (!query && fileInput.files.length === 0) {
-            alert("Please enter text or upload an image.");
-            return;
+                    <!-- Toggle: AI Summary -->
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="aiSummary" class="sr-only peer">
+                        <div class="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <span class="ms-3 text-sm font-medium text-gray-300">
+                            AI Summarizer
+                        </span>
+                    </label>
+                </div>
+
+                <button onclick="search()" class="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-bold py-2 px-8 rounded-lg shadow-lg hover:shadow-cyan-500/50 transition transform hover:-translate-y-0.5 flex items-center">
+                    <span id="btn-text">Run Search</span>
+                    <div id="btn-loader" class="loader ml-2 hidden" style="width: 20px; height: 20px; border-width: 2px;"></div>
+                </button>
+            </div>
+        </div>
+
+        <!-- AI Summary Section -->
+        <div id="ai-section" class="hidden mb-8 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-1 border-l-4 border-purple-500 shadow-lg">
+            <div class="bg-gray-800/50 p-5 rounded-lg">
+                <div class="flex items-center gap-2 mb-2 text-purple-400 font-bold">
+                    <span>✨</span> <span>Cross-Modal Consensus Engine</span>
+                </div>
+                <div id="ai-content" class="text-gray-300 text-sm leading-relaxed"></div>
+            </div>
+        </div>
+
+        <!-- Results Grid -->
+        <div id="results-area" class="min-h-[200px]"></div>
+
+        <!-- PDF Preview Modal -->
+        <div id="preview-modal" class="fixed inset-0 z-[100] hidden bg-black/90 backdrop-blur-sm">
+            <div class="flex flex-col h-full max-w-6xl mx-auto p-4">
+                <div class="flex justify-between items-center mb-2 bg-gray-800 p-3 rounded-t-lg">
+                    <h3 class="text-cyan-400 font-bold">Document Preview</h3>
+                    <button onclick="closePreview()" class="text-gray-400 hover:text-white bg-gray-700 hover:bg-red-500 px-3 py-1 rounded transition">Close ✕</button>
+                </div>
+                <iframe id="preview-frame" class="flex-grow w-full bg-white rounded-b-lg border-0"></iframe>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // HTML Generator for Cards
+        function generateCards(papers, title) {
+            if (!papers || papers.length === 0) return '';
+            
+            const cardsHtml = papers.map(item => {
+                const isHighlyCited = item.citations && item.citations > 1000;
+                
+                return `
+                <div class="bg-gray-800 p-4 rounded-lg border-l-4 border-gray-600 hover:border-cyan-400 hover:bg-gray-750 transition group shadow-md mb-3 flex flex-col h-full">
+                    <div class="flex-grow">
+                        <h3 class="font-semibold text-gray-100 mb-1 leading-tight line-clamp-2" title="${item.filename}">
+                            ${item.filename}
+                        </h3>
+                        
+                        <div class="flex items-center gap-2 mb-3 text-xs">
+                            <span class="bg-gray-700 px-2 py-0.5 rounded text-cyan-300">Score: ${(item.score).toFixed(3)}</span>
+                            ${item.citations !== null ? 
+                                `<span class="bg-gray-700 px-2 py-0.5 rounded ${isHighlyCited ? 'text-yellow-400' : 'text-gray-400'}">
+                                    ${isHighlyCited ? '🔥' : '📚'} ${item.citations.toLocaleString()} Citations
+                                 </span>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="viewPdf('${item.url}')" class="flex-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 py-1.5 rounded text-sm transition">
+                            Preview
+                        </button>
+                        <a href="${item.url}" download class="flex-1 bg-gray-700 hover:bg-gray-600 text-center text-gray-300 py-1.5 rounded text-sm transition">
+                            Download
+                        </a>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="flex flex-col">
+                    <div class="text-center bg-gray-800 p-2 rounded-t-lg border-b border-gray-700 font-bold text-cyan-500 mb-2 uppercase text-sm tracking-wider">
+                        ${title}
+                    </div>
+                    <div class="flex-grow">
+                        ${cardsHtml}
+                    </div>
+                </div>
+            `;
         }
 
-        resultDiv.innerHTML = "<p style='text-align:center'>Searching neural embeddings...</p>";
-        previewFrame.style.display = "none";
+        async function search() {
+            const query = document.getElementById('query').value;
+            const fileInput = document.getElementById('imgInput');
+            const trustedMode = document.getElementById('trustedMode').checked;
+            const aiSummary = document.getElementById('aiSummary').checked;
+            const resultDiv = document.getElementById('results-area');
+            const aiSection = document.getElementById('ai-section');
+            const btnLoader = document.getElementById('btn-loader');
+            const btnText = document.getElementById('btn-text');
 
-        const formData = new FormData();
-        if (query) formData.append("query", query);
-        if (fileInput.files.length > 0) formData.append("file", fileInput.files[0]);
-
-        try {
-            const response = await fetch('http://localhost:8000/search', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
-
-            resultDiv.innerHTML = "";
-            if (data.results.length === 0) {
-                resultDiv.innerHTML = "<p>No relevant papers found.</p>";
+            if (!query && fileInput.files.length === 0) {
+                alert("Please enter text or upload an image.");
                 return;
             }
 
-            data.results.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <div>
-                        <h3>${item.filename}</h3>
-                        <div class="score">Match Score: ${(item.score * 100).toFixed(1)}%</div>
-                    </div>
-                    <div class="actions">
-                        <button class="btn-view" onclick="viewPdf('${item.url}')">👁 Preview</button>
-                        <a href="${item.url}" class="btn-dl" download>⬇ Download</a>
-                    </div>
-                `;
-                resultDiv.appendChild(card);
-            });
-        } catch (error) {
-            console.error(error);
-            resultDiv.innerHTML = "<p style='color:red'>Error connecting to backend.</p>";
+            // Reset UI
+            resultDiv.innerHTML = '';
+            aiSection.classList.add('hidden');
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+
+            const formData = new FormData();
+            if (query) formData.append("query", query);
+            if (fileInput.files.length > 0) formData.append("file", fileInput.files[0]);
+            
+            // Pass Toggles
+            formData.append("trusted_mode", trustedMode);
+            formData.append("ai_summary", aiSummary);
+
+            try {
+                const response = await fetch('http://localhost:8000/search', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                // 1. Render AI Summary
+                if (data.summary) {
+                    document.getElementById('ai-content').innerHTML = data.summary;
+                    aiSection.classList.remove('hidden');
+                }
+
+                // 2. Render Grid
+                if (data.mode === 'hybrid') {
+                    resultDiv.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            ${generateCards(data.results_text, "Text Matches")}
+                            ${generateCards(data.results_image, "Visual Matches")}
+                            ${generateCards(data.results_combined, "Interleaved (Best Mix)")}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="max-w-3xl mx-auto">
+                            ${generateCards(data.results, query ? "Semantic Text Matches" : "Visual Image Matches")}
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error(error);
+                resultDiv.innerHTML = "<p class='text-red-500 text-center'>Error connecting to server.</p>";
+            } finally {
+                btnLoader.classList.add('hidden');
+                btnText.classList.remove('hidden');
+            }
         }
-    }
 
-    function viewPdf(url) {
-        const frame = document.getElementById('preview-frame');
-        frame.src = url;
-        frame.style.display = "block";
-        // Scroll to preview
-        frame.scrollIntoView({ behavior: 'smooth' });
-    }
-</script>
+        function viewPdf(url) {
+            const modal = document.getElementById('preview-modal');
+            const frame = document.getElementById('preview-frame');
+            frame.src = url;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Stop scrolling
+        }
 
+        function closePreview() {
+            const modal = document.getElementById('preview-modal');
+            const frame = document.getElementById('preview-frame');
+            frame.src = "";
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    </script>
 </body>
 </html>
